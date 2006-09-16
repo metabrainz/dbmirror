@@ -5,15 +5,8 @@
 #
 #
 #
-#    Written by Steven Singer (ssinger@navtechinc.com)
+#    Written by Steven Singer 
 #    (c) 2001-2002 Navtech Systems Support Inc.
-#    Released under the GNU Public License version 2. See COPYING.
-#
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
 #
 ##############################################################################
 # $PostgreSQL: pgsql/contrib/dbmirror/clean_pending.pl,v 1.5 2004/09/10 04:31:06 neilc Exp $

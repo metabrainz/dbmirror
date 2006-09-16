@@ -1,13 +1,13 @@
 /****************************************************************************
  * pending.c
- * $Id: pending.c,v 1.1 2006/09/05 04:33:40 oldcode Exp $
+ * $Id: pending.c,v 1.2 2006/09/16 17:46:50 ssinger Exp $
  * $PostgreSQL: pgsql/contrib/dbmirror/pending.c,v 1.26 2006/07/11 17:26:58 momjian Exp $
  *
  * This file contains a trigger for Postgresql-7.x to record changes to tables
  * to a pending table for mirroring.
  * All tables that should be mirrored should have this trigger hooked up to it.
  *
- *	 Written by Steven Singer (ssinger@navtechinc.com)
+ *	 Written by Steven Singer 
  *	 (c) 2001-2002 Navtech Systems Support Inc.
  *		 ALL RIGHTS RESERVED
  *

@@ -8,7 +8,7 @@
 # specific host.  The database on that host is then updated with the changes.
 #
 #
-#    Written by Steven Singer (ssinger@navtechinc.com)
+#    Written by Steven Singer 
 #    (c) 2001-2002 Navtech Systems Support Inc.
 # ALL RIGHTS RESERVED;
 #

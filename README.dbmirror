@@ -3,8 +3,9 @@ DBMirror - PostgreSQL Database Mirroring
 
 
 DBMirror is a database mirroring system developed for the PostgreSQL
-database Written and maintained by Steven Singer(ssinger@navtechinc.com)
+database Written and maintained by Steven Singer(ssinger_pg@sympatico.ca)
 
+The project homepage is at http://pgfoundry.org/projects/dbmirror/
 
 (c) 2001-2004 Navtech Systems Support Inc.
 ALL RIGHTS RESERVED
@@ -54,9 +55,25 @@ If the transaction has been sent to all know slave hosts (All entries
 in the MirrorHost table) then all records of it are purged from the
 Pending tables.
 
+
+History
+------------
+DBMirror was developed as a simple master/slave replication solution for 
+Postgresql 7.x and was included in in the contrib package from 7.3 to 8.1
+
+Since the development of dbmirror in 2001  other replication systems
+for Postgresql have been developed.  For many workloads Slony
+(http://slony.info) might be more suitable.
+
+DBMirror is currently hosted at http://pgfoundry.org/projects/dbmirror/
+and is no longer included in the Postgresql contrib module. 
+
+
 Requirements:
 ---------------------------------
--PostgreSQL-8.1 (Older versions are no longer supported)
+-PostgreSQL-8.1 (Older versions are no longer supported but the versions
+ of dbmirror included in the contrib module for older versions of
+ Postgresql should work)
 -Perl 5.6 or 5.8 (Other versions might work)
 -PgPerl (http://gborg.postgresql.org/project/pgperl/projdisplay.php)
 
@@ -245,10 +262,9 @@ dbmirror_pending etc..
 Credits
 -----------
 Achilleus Mantzios <achill@matrix.gatewaynet.com>
-
+Navtech Systems Support for sponsoring the initial development
 
 
 
 Steven Singer
-Navtech Systems Support Inc.
-ssinger@navtechinc.com
+ssinger_pg@sympatico.ca
