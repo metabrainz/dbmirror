@@ -38,6 +38,8 @@
 #include "commands/trigger.h"
 #include "utils/lsyscache.h"
 #include "utils/array.h"
+#include "catalog/pg_type.h"
+#include "access/xact.h"
 
 PG_MODULE_MAGIC;
 
