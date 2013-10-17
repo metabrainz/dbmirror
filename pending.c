@@ -432,6 +432,12 @@ storeData(char *cpTableName, HeapTuple tTupleData,
 	/* pplan = SPI_saveplan(pplan); */
 	cpKeyData = packageData(tTupleData, tTupleDesc, tableOid, eKeyUsage);
 
+	if (cpKeyData == NULL)
+	{
+		elog(ERROR, "table lacks primary key");
+		return -1;
+	}
+
 	planData[0] = PointerGetDatum(isKey);
 	planData[1] = PointerGetDatum(cpKeyData);
 	iRetValue = SPI_execp(pplan, planData, NULL, 1);
