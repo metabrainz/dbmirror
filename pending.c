@@ -7,7 +7,7 @@
  * to a pending table for mirroring.
  * All tables that should be mirrored should have this trigger hooked up to it.
  *
- *	 Written by Steven Singer 
+ *	 Written by Steven Singer
  *	 (c) 2001-2002 Navtech Systems Support Inc.
  *		 ALL RIGHTS RESERVED
  *
@@ -38,6 +38,7 @@
 #include "commands/trigger.h"
 #include "utils/lsyscache.h"
 #include "utils/array.h"
+#include "utils/rel.h"
 #include "catalog/pg_type.h"
 #include "access/xact.h"
 
@@ -267,7 +268,7 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 			iResult = storeData(cpTableName, tBeforeTuple, tTupDesc, tableOid, TRUE, ALLKEYS);
 		else
 			iResult = storeKeyInfo(cpTableName, tBeforeTuple, tTupDesc, tableOid);
-		
+
 	}
 	else if (cOp == 'i')
 	{
@@ -281,11 +282,11 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 	else
 	{
 		/* op must be an update. */
-		if (verbose == TRUE) 
+		if (verbose == TRUE)
 			iResult = storeData(cpTableName, tBeforeTuple, tTupDesc, tableOid, TRUE, ALLKEYS);
 		else
 			iResult = storeKeyInfo(cpTableName, tBeforeTuple, tTupDesc, tableOid);
-							   
+
 		iResult = iResult ? iResult :
 			storeData(cpTableName, tAfterTuple, tTupDesc, tableOid, FALSE, ALL);
 	}
@@ -499,8 +500,8 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 	if (tpPKeys != NULL)
 		debug_msg("dbmirror:packageData have primary keys");
-	
-	// Get FKs if required	
+
+	// Get FKs if required
 	if (eKeyUsage == ALLKEYS)
 	{
 		tpFKeys = getForeignKey(tableOid);
@@ -660,7 +661,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 		SPI_pfree(tpPKeys);
 	if (tpFKeys != NULL)
 		SPI_pfree(tpFKeys);
-		
+
 	debug_msg3("dbmirror:packageData returning DataBlockSize:%d iUsedDataBlock:%d",
 			   iDataBlockSize,
 			   iUsedDataBlock);
