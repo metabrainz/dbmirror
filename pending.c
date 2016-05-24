@@ -72,7 +72,7 @@ char *packageData(HeapTuple tTupleData, TupleDesc tTupleDecs, Oid tableOid,
 
 #define BUFFER_SIZE 256
 #define MAX_OID_LEN 10
-/* #define DEBUG_OUTPUT 1 */
+/*#define DEBUG_OUTPUT 1 */
 extern Datum recordchange(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(recordchange);
@@ -229,7 +229,9 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 
 	/* Points the current tuple(before or after) */
 	Datum		saPlanData[3];
-	Oid			taPlanArgTypes[4] = {NAMEOID, CHAROID, INT4OID};
+	Oid			taPlanArgTypes[4] = {NAMEOID,
+		CHAROID,
+	INT4OID};
 	void	   *vpPlan;
 
 	tCurTuple = tBeforeTuple ? tBeforeTuple : tAfterTuple;
@@ -306,7 +308,6 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 	void	   *pplan;
 	Datum		saPlanData[1];
 	char	   *cpKeyData;
-        char       *cpKeyData_tmp;
 	int			iRetCode;
 
 	pplan = SPI_prepare(insQuery, 1, saPlanArgTypes);
@@ -326,19 +327,14 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 						cpTableName)));
 
 
-        cpKeyData_tmp = SPI_palloc(VARHDRSZ+strlen(cpKeyData));
-        memcpy((cpKeyData_tmp+VARHDRSZ), cpKeyData, strlen(cpKeyData));
-        SET_VARSIZE(cpKeyData_tmp, VARHDRSZ+strlen(cpKeyData));
 	debug_msg2("dbmirror:storeKeyInfo key data: %s", cpKeyData);
 
-	saPlanData[0] = PointerGetDatum(cpKeyData_tmp);
+	saPlanData[0] = PointerGetDatum(cpKeyData);
 
 	iRetCode = SPI_execp(pplan, saPlanData, NULL, 1);
 
 	if (cpKeyData != NULL)
 		SPI_pfree(cpKeyData);
-        if (cpKeyData_tmp != 0)
-                SPI_pfree(cpKeyData_tmp);
 
 	if (iRetCode != SPI_OK_INSERT)
 		ereport(ERROR,
@@ -425,7 +421,6 @@ storeData(char *cpTableName, HeapTuple tTupleData,
 	void	   *pplan;
 	Datum		planData[2];
 	char	   *cpKeyData;
-        char       *cpKeyData_tmp;
 	int			iRetValue;
 
 	pplan = SPI_prepare(insQuery, 2, planArgTypes);
@@ -444,18 +439,12 @@ storeData(char *cpTableName, HeapTuple tTupleData,
 		return -1;
 	}
 
-        cpKeyData_tmp = SPI_palloc(VARHDRSZ+strlen(cpKeyData));
-        memcpy((cpKeyData_tmp+VARHDRSZ), cpKeyData, strlen(cpKeyData));
-        SET_VARSIZE(cpKeyData_tmp, VARHDRSZ+strlen(cpKeyData));
-
 	planData[0] = PointerGetDatum(isKey);
-        planData[1] = PointerGetDatum(cpKeyData_tmp);
+	planData[1] = PointerGetDatum(cpKeyData);
 	iRetValue = SPI_execp(pplan, planData, NULL, 1);
 
 	if (cpKeyData != 0)
-	    SPI_pfree(cpKeyData);
-        if (cpKeyData_tmp != 0)
-            SPI_pfree(cpKeyData_tmp);
+		SPI_pfree(cpKeyData);
 
 	if (iRetValue != SPI_OK_INSERT)
 	{
@@ -494,8 +483,10 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 	ArrayType  *tpFKeys = NULL;
 	int			iColumnCounter;
 	char	   *cpDataBlock;
+	char	               *cpDataBlock_tmp;
 	int			iDataBlockSize;
 	int			iUsedDataBlock;
+	int                     iBlockLen;
 
 	iNumCols = tTupleDesc->natts;
 
@@ -679,8 +670,14 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 	memset(cpDataBlock + iUsedDataBlock, 0, iDataBlockSize - iUsedDataBlock);
 
-	return cpDataBlock;
+        iBlockLen = strlen(cpDataBlock);
+        cpDataBlock_tmp = SPI_palloc(VARHDRSZ+iBlockLen);
+        memcpy((cpDataBlock_tmp+VARHDRSZ), cpDataBlock, iBlockLen);
+        SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ+iBlockLen);
 
+        SPI_pfree(cpDataBlock);
+
+	return cpDataBlock_tmp;
 }
 
 
