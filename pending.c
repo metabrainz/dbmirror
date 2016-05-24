@@ -221,7 +221,7 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 			 char cOp,
 			 bool verbose)
 {
-	char	   *cpQueryBase = "INSERT INTO dbmirror_pending (TableName,Op,XID) VALUES ($1,$2,$3)";
+	void	   *vpPlan;
 	int			iResult = 0;
 	HeapTuple	tCurTuple;
 	char		nulls[3] = "   ";
@@ -229,11 +229,11 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 	/* Points the current tuple(before or after) */
 	Datum		saPlanData[3];
 	Oid			taPlanArgTypes[3] = {NAMEOID, CHAROID, INT4OID};
-	void	   *vpPlan;
+	char	   *cpQueryBase =
+	"INSERT INTO dbmirror_pending (TableName,Op,XID) VALUES ($1,$2,$3)";
+
 
 	tCurTuple = tBeforeTuple ? tBeforeTuple : tAfterTuple;
-
-
 
 	vpPlan = SPI_prepare(cpQueryBase, 3, taPlanArgTypes);
 	if (vpPlan == NULL)
@@ -293,13 +293,15 @@ int
 storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 			 TupleDesc tTupleDesc, Oid tableOid)
 {
-
-	Oid			saPlanArgTypes[1] = {VARCHAROID};
-	char	   *insQuery = "INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) VALUES(currval('dbmirror_pending_seqid_seq'),'t',$1)";
 	void	   *pplan;
-	Datum		saPlanData[1];
 	char	   *cpKeyData;
 	int			iRetCode;
+
+	Datum		saPlanData[1];
+	Oid			saPlanArgTypes[1] = {VARCHAROID};
+	char	   *insQuery =
+	"INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) " \
+	"VALUES(currval('dbmirror_pending_seqid_seq'),'t',$1)";
 
 	pplan = SPI_prepare(insQuery, 1, saPlanArgTypes);
 	if (pplan == NULL)
@@ -340,7 +342,6 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 int2vector *
 getPrimaryKey(Oid tblOid)
 {
-	char	   *queryBase;
 	char	   *query;
 	bool		isNull;
 	int2vector *resultKey;
@@ -349,7 +350,9 @@ getPrimaryKey(Oid tblOid)
 	Datum		resDatum;
 	int			ret;
 
-	queryBase = "SELECT indkey FROM pg_index WHERE indisprimary='t' AND indrelid=";
+	char	   *queryBase =
+	"SELECT indkey FROM pg_index WHERE indisprimary='t' AND indrelid=";
+
 	query = SPI_palloc(strlen(queryBase) + MAX_OID_LEN + 1);
 	sprintf(query, "%s%d", queryBase, tblOid);
 
@@ -371,7 +374,6 @@ getPrimaryKey(Oid tblOid)
 ArrayType *
 getForeignKey(Oid tblOid)
 {
-	char	   *queryBase;
 	char	   *query;
 	bool		isNull;
 	ArrayType  *resultKey;
@@ -379,7 +381,9 @@ getForeignKey(Oid tblOid)
 	Datum		resDatum;
 	int			ret;
 
-	queryBase = "SELECT array_cat_agg(conkey) FROM pg_constraint WHERE contype = 'f' AND conrelid=";
+	char	   *queryBase =
+	"SELECT array_cat_agg(conkey) FROM pg_constraint WHERE contype = 'f' AND conrelid=";
+
 	query = SPI_palloc(strlen(queryBase) + MAX_OID_LEN + 1);
 	sprintf(query, "%s%d", queryBase, tblOid);
 
@@ -403,13 +407,15 @@ int
 storeData(char *cpTableName, HeapTuple tTupleData,
 		  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage)
 {
-
-	Oid			planArgTypes[2] = {BOOLOID, VARCHAROID};
-	char	   *insQuery = "INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) VALUES(currval('dbmirror_pending_seqid_seq'),$1,$2)";
 	void	   *pplan;
-	Datum		planData[2];
 	char	   *cpKeyData;
 	int			iRetValue;
+
+	Datum		planData[2];
+	Oid			planArgTypes[2] = { BOOLOID, VARCHAROID };
+	char	   *insQuery =
+	"INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) " \
+	"VALUES(currval('dbmirror_pending_seqid_seq'),$1,$2)";
 
 	pplan = SPI_prepare(insQuery, 2, planArgTypes);
 	if (pplan == NULL)
@@ -719,20 +725,21 @@ nextval_mirror(PG_FUNCTION_ARGS)
 static void
 saveSequenceUpdate(Oid relid, int64 nextValue, bool iscalled)
 {
-	Oid			insertArgTypes[2] = {NAMEOID, INT4OID};
-	Oid			insertDataArgTypes[1] = {NAMEOID};
 	void	   *insertPlan;
 	void	   *insertDataPlan;
-	Datum		insertDatum[2];
-	Datum		insertDataDatum[1];
 	char		nextSequenceText[64];
 
+	Datum		insertDatum[2];
+	Oid			insertArgTypes[2] = {NAMEOID, INT4OID};
 	const char *insertQuery =
-	"INSERT INTO dbmirror_Pending (TableName,Op,XID) VALUES" \
-	"($1,'s',$2)";
+	"INSERT INTO dbmirror_Pending (TableName,Op,XID) " \
+	"VALUES ($1,'s',$2)";
+
+	Datum		insertDataDatum[1];
+	Oid			insertDataArgTypes[1] = {NAMEOID};
 	const char *insertDataQuery =
-	"INSERT INTO dbmirror_PendingData(SeqId,IsKey,Data) VALUES " \
-	"(currval('dbmirror_pending_seqid_seq'),'t',$1)";
+	"INSERT INTO dbmirror_PendingData(SeqId,IsKey,Data) " \
+	"VALUES (currval('dbmirror_pending_seqid_seq'),'t',$1)";
 
 	if (SPI_connect() < 0)
 		ereport(ERROR,
