@@ -668,12 +668,12 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 	memset(cpDataBlock + iUsedDataBlock, 0, iDataBlockSize - iUsedDataBlock);
 
-        iBlockLen = strlen(cpDataBlock);
-        cpDataBlock_tmp = SPI_palloc(VARHDRSZ+iBlockLen);
-        memcpy((cpDataBlock_tmp+VARHDRSZ), cpDataBlock, iBlockLen);
-        SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ+iBlockLen);
+	iBlockLen = strlen(cpDataBlock);
+	cpDataBlock_tmp = SPI_palloc(VARHDRSZ+iBlockLen);
+	memcpy((cpDataBlock_tmp+VARHDRSZ), cpDataBlock, iBlockLen);
+	SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ+iBlockLen);
 
-        SPI_pfree(cpDataBlock);
+	SPI_pfree(cpDataBlock);
 
 	return cpDataBlock_tmp;
 }
