@@ -229,9 +229,7 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 
 	/* Points the current tuple(before or after) */
 	Datum		saPlanData[3];
-	Oid			taPlanArgTypes[4] = {NAMEOID,
-		CHAROID,
-	INT4OID};
+	Oid			taPlanArgTypes[4] = {NAMEOID, CHAROID, INT4OID};
 	void	   *vpPlan;
 
 	tCurTuple = tBeforeTuple ? tBeforeTuple : tAfterTuple;
