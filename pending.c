@@ -123,7 +123,6 @@ recordchange(PG_FUNCTION_ARGS)
 
 	if (fcinfo->context != NULL)
 	{
-
 		if (SPI_connect() < 0)
 		{
 			ereport(ERROR, (errcode(ERRCODE_CONNECTION_FAILURE),
@@ -140,6 +139,7 @@ recordchange(PG_FUNCTION_ARGS)
 		} else {
 			verbose = (strcmp(trigger->tgargs[0], "verbose") == 0) ? TRUE : FALSE;
 		}
+
 		debug_msg2("dbmirror:recordchange verbose mode = %i", verbose);
 
 		/* Extract the table name */
@@ -179,7 +179,6 @@ recordchange(PG_FUNCTION_ARGS)
 		{
 			ereport(ERROR, (errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
 							errmsg("dbmirror:recordchange Unknown operation")));
-
 		}
 
 		if (storePending(fullyqualtblname, beforeTuple, afterTuple,
@@ -191,7 +190,6 @@ recordchange(PG_FUNCTION_ARGS)
 					 errmsg("operation could not be mirrored")));
 
 			return PointerGetDatum(NULL);
-
 		}
 		debug_msg("dbmirror:recordchange returning on success");
 
@@ -224,7 +222,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 			 bool verbose)
 {
 	char	   *cpQueryBase = "INSERT INTO dbmirror_pending (TableName,Op,XID) VALUES ($1,$2,$3)";
-
 	int			iResult = 0;
 	HeapTuple	tCurTuple;
 	char		nulls[3] = "   ";
@@ -243,7 +240,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 		ereport(ERROR, (errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
 						errmsg("dbmirror:storePending error creating plan")));
 
-
 	saPlanData[0] = PointerGetDatum(cpTableName);
 	saPlanData[1] = CharGetDatum(cOp);
 	saPlanData[2] = Int32GetDatum(GetCurrentTransactionId());
@@ -253,10 +249,7 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 		elog(NOTICE, "storedPending fired (%s) returned %d",
 			 cpQueryBase, iResult);
 
-
-
 	debug_msg("dbmirror:storePending row successfully stored in pending table");
-
 
 	if (cOp == 'd')
 	{
@@ -268,7 +261,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 			iResult = storeData(cpTableName, tBeforeTuple, tTupDesc, tableOid, TRUE, ALLKEYS);
 		else
 			iResult = storeKeyInfo(cpTableName, tBeforeTuple, tTupDesc, tableOid);
-
 	}
 	else if (cOp == 'i')
 	{
@@ -277,7 +269,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 		 * Store all data
 		 */
 		iResult = storeData(cpTableName, tAfterTuple, tTupDesc, tableOid, FALSE, ALL);
-
 	}
 	else
 	{
@@ -326,7 +317,6 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 				 errmsg("there is no PRIMARY KEY for table %s",
 						cpTableName)));
 
-
 	debug_msg2("dbmirror:storeKeyInfo key data: %s", cpKeyData);
 
 	saPlanData[0] = PointerGetDatum(cpKeyData);
@@ -344,10 +334,7 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 	debug_msg("insert successful");
 
 	return 0;
-
 }
-
-
 
 
 int2vector *
@@ -365,6 +352,7 @@ getPrimaryKey(Oid tblOid)
 	queryBase = "SELECT indkey FROM pg_index WHERE indisprimary='t' AND indrelid=";
 	query = SPI_palloc(strlen(queryBase) + MAX_OID_LEN + 1);
 	sprintf(query, "%s%d", queryBase, tblOid);
+
 	ret = SPI_exec(query, 1);
 	SPI_pfree(query);
 	if (ret != SPI_OK_SELECT || SPI_processed != 1)
@@ -394,6 +382,7 @@ getForeignKey(Oid tblOid)
 	queryBase = "SELECT array_cat_agg(conkey) FROM pg_constraint WHERE contype = 'f' AND conrelid=";
 	query = SPI_palloc(strlen(queryBase) + MAX_OID_LEN + 1);
 	sprintf(query, "%s%d", queryBase, tblOid);
+
 	ret = SPI_exec(query, 1);
 	SPI_pfree(query);
 	if (ret != SPI_OK_SELECT || SPI_processed != 1)
@@ -405,7 +394,6 @@ getForeignKey(Oid tblOid)
 	resultKey = DatumGetArrayTypePCopy(resDatum);
 
 	return resultKey;
-
 }
 
 /******************************************************************************
@@ -454,9 +442,7 @@ storeData(char *cpTableName, HeapTuple tTupleData,
 
 	debug_msg("dbmirror:storeKeyData insert successful");
 
-
 	return 0;
-
 }
 
 /**
@@ -524,7 +510,6 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 		int			currentFKindex;
 		char	   *cpUnFormatedPtr;
 		char	   *cpFormatedPtr;
-
 		char	   *cpFieldName;
 		char	   *cpFieldData;
 
@@ -608,7 +593,6 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 			iUsedDataBlock++;
 			cpFormatedPtr++;
 			continue;
-
 		}
 		debug_msg2("dbmirror:packageData field data: \"%s\"",
 				   cpFieldData);
@@ -649,8 +633,10 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 				   cpDataBlock);
 
 	}							/* for iColumnCounter  */
+
 	if (tpPKeys != NULL)
 		SPI_pfree(tpPKeys);
+
 	if (tpFKeys != NULL)
 		SPI_pfree(tpFKeys);
 
