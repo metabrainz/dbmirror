@@ -805,3 +805,6 @@ saveSequenceUpdate(Oid relid, int64 nextValue, bool iscalled)
 
 	SPI_finish();
 }
+
+
+/* vim: set ts=4 sw=4: */
