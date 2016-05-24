@@ -61,13 +61,13 @@ int storePending(char *cpTableName, HeapTuple tBeforeTuple,
 int storeKeyInfo(char *cpTableName, HeapTuple tTupleData, TupleDesc tTuplDesc,
 			 Oid tableOid);
 int storeData(char *cpTableName, HeapTuple tTupleData,
-		  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage);
+  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage);
 
 int2vector *getPrimaryKey(Oid tblOid);
-ArrayType *getForeignKey(Oid tblOid);
+ArrayType  *getForeignKey(Oid tblOid);
 
 char *packageData(HeapTuple tTupleData, TupleDesc tTupleDecs, Oid tableOid,
-				  enum FieldUsage eKeyUsage);
+			enum FieldUsage eKeyUsage);
 
 
 #define BUFFER_SIZE 256
@@ -109,7 +109,7 @@ Datum
 recordchange(PG_FUNCTION_ARGS)
 {
 	TriggerData *trigdata;
-	Trigger		*trigger;
+	Trigger    *trigger;
 	TupleDesc	tupdesc;
 	HeapTuple	beforeTuple = NULL;
 	HeapTuple	afterTuple = NULL;
@@ -119,24 +119,30 @@ recordchange(PG_FUNCTION_ARGS)
 	char	   *schemaname;
 	char	   *fullyqualtblname;
 	char	   *pkxpress = NULL;
-	bool	    verbose;
+	bool		verbose;
 
 	if (fcinfo->context != NULL)
 	{
 		if (SPI_connect() < 0)
 		{
 			ereport(ERROR, (errcode(ERRCODE_CONNECTION_FAILURE),
-							errmsg("dbmirror:recordchange could not connect to SPI")));
+				  errmsg("dbmirror:recordchange could not connect to SPI")));
 			return -1;
 		}
 
 		trigdata = (TriggerData *) fcinfo->context;
 
-		/* Get parameter to known if verbose mode should be activated (off by default) */
+		/*
+		 * Get parameter to known if verbose mode should be activated (off by
+		 * default)
+		 */
 		trigger = trigdata->tg_trigger;
-		if (trigger->tgnargs < 1) {
+		if (trigger->tgnargs < 1)
+		{
 			verbose = FALSE;
-		} else {
+		}
+		else
+		{
 			verbose = (strcmp(trigger->tgargs[0], "verbose") == 0) ? TRUE : FALSE;
 		}
 
@@ -178,7 +184,7 @@ recordchange(PG_FUNCTION_ARGS)
 		else
 		{
 			ereport(ERROR, (errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
-							errmsg("dbmirror:recordchange Unknown operation")));
+						 errmsg("dbmirror:recordchange Unknown operation")));
 		}
 
 		if (storePending(fullyqualtblname, beforeTuple, afterTuple,
@@ -405,14 +411,14 @@ getForeignKey(Oid tblOid)
  *****************************************************************************/
 int
 storeData(char *cpTableName, HeapTuple tTupleData,
-		  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage)
+   TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage)
 {
 	void	   *pplan;
 	char	   *cpKeyData;
 	int			iRetValue;
 
 	Datum		planData[2];
-	Oid			planArgTypes[2] = { BOOLOID, VARCHAROID };
+	Oid			planArgTypes[2] = {BOOLOID, VARCHAROID};
 	char	   *insQuery =
 	"INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) " \
 	"VALUES(currval('dbmirror_pending_seqid_seq'),$1,$2)";
@@ -484,7 +490,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 	debug_msg2("dbmirror:packageData table oid = %i", tableOid);
 
-	// Get PKs if required
+	/* Get PKs if required */
 	if (eKeyUsage != ALL)
 	{
 		tpPKeys = getPrimaryKey(tableOid);
@@ -495,7 +501,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 	if (tpPKeys != NULL)
 		debug_msg("dbmirror:packageData have primary keys");
 
-	// Get FKs if required
+	/* Get FKs if required */
 	if (eKeyUsage == ALLKEYS)
 	{
 		tpFKeys = getForeignKey(tableOid);
@@ -548,9 +554,9 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 				}
 			}
 
-			if ( (iIsPrimaryKey && (eKeyUsage == NONPRIMARY))
+			if ((iIsPrimaryKey && (eKeyUsage == NONPRIMARY))
 				|| (iIsForeignKey && (eKeyUsage == PRIMARY))
-				|| (!iIsPrimaryKey && !iIsForeignKey && (eKeyUsage != NONPRIMARY)) )
+				|| (!iIsPrimaryKey && !iIsForeignKey && (eKeyUsage != NONPRIMARY)))
 			{
 				/**
 				 * Don't use.
@@ -744,7 +750,7 @@ saveSequenceUpdate(Oid relid, int64 nextValue, bool iscalled)
 	if (SPI_connect() < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-				 errmsg("dbmirror:savesequenceupdate could not connect to SPI")));
+			errmsg("dbmirror:savesequenceupdate could not connect to SPI")));
 
 	insertPlan = SPI_prepare(insertQuery, 2, insertArgTypes);
 	insertDataPlan = SPI_prepare(insertDataQuery, 1, insertDataArgTypes);
