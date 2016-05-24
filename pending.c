@@ -303,7 +303,7 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 			 TupleDesc tTupleDesc, Oid tableOid)
 {
 
-	Oid			saPlanArgTypes[1] = {NAMEOID};
+	Oid			saPlanArgTypes[1] = {VARCHAROID};
 	char	   *insQuery = "INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) VALUES(currval('dbmirror_pending_seqid_seq'),'t',$1)";
 	void	   *pplan;
 	Datum		saPlanData[1];
@@ -416,7 +416,7 @@ storeData(char *cpTableName, HeapTuple tTupleData,
 		  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage)
 {
 
-	Oid			planArgTypes[2] = {BOOLOID, NAMEOID};
+	Oid			planArgTypes[2] = {BOOLOID, VARCHAROID};
 	char	   *insQuery = "INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) VALUES(currval('dbmirror_pending_seqid_seq'),$1,$2)";
 	void	   *pplan;
 	Datum		planData[2];
@@ -483,8 +483,10 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 	ArrayType  *tpFKeys = NULL;
 	int			iColumnCounter;
 	char	   *cpDataBlock;
+	char	               *cpDataBlock_tmp;
 	int			iDataBlockSize;
 	int			iUsedDataBlock;
+	int                     iBlockLen;
 
 	iNumCols = tTupleDesc->natts;
 
@@ -668,8 +670,14 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 	memset(cpDataBlock + iUsedDataBlock, 0, iDataBlockSize - iUsedDataBlock);
 
-	return cpDataBlock;
+        iBlockLen = strlen(cpDataBlock);
+        cpDataBlock_tmp = SPI_palloc(VARHDRSZ+iBlockLen);
+        memcpy((cpDataBlock_tmp+VARHDRSZ), cpDataBlock, iBlockLen);
+        SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ+iBlockLen);
 
+        SPI_pfree(cpDataBlock);
+
+	return cpDataBlock_tmp;
 }
 
 
