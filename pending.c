@@ -67,12 +67,14 @@ int2vector *getPrimaryKey(Oid tblOid);
 ArrayType *getForeignKey(Oid tblOid);
 
 char *packageData(HeapTuple tTupleData, TupleDesc tTupleDecs, Oid tableOid,
-			enum FieldUsage eKeyUsage);
+				  enum FieldUsage eKeyUsage);
 
 
 #define BUFFER_SIZE 256
 #define MAX_OID_LEN 10
+
 /*#define DEBUG_OUTPUT 1 */
+
 extern Datum recordchange(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(recordchange);
@@ -125,7 +127,7 @@ recordchange(PG_FUNCTION_ARGS)
 		if (SPI_connect() < 0)
 		{
 			ereport(ERROR, (errcode(ERRCODE_CONNECTION_FAILURE),
-				  errmsg("dbmirror:recordchange could not connect to SPI")));
+							errmsg("dbmirror:recordchange could not connect to SPI")));
 			return -1;
 		}
 
@@ -176,7 +178,7 @@ recordchange(PG_FUNCTION_ARGS)
 		else
 		{
 			ereport(ERROR, (errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
-						 errmsg("dbmirror:recordchange Unknown operation")));
+							errmsg("dbmirror:recordchange Unknown operation")));
 
 		}
 
@@ -481,10 +483,10 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 	ArrayType  *tpFKeys = NULL;
 	int			iColumnCounter;
 	char	   *cpDataBlock;
-	char	               *cpDataBlock_tmp;
+	char	   *cpDataBlock_tmp;
 	int			iDataBlockSize;
 	int			iUsedDataBlock;
-	int                     iBlockLen;
+	int			iBlockLen;
 
 	iNumCols = tTupleDesc->natts;
 
@@ -578,19 +580,13 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 			continue;
 		}
 
-		cpFieldName = DatumGetPointer(NameGetDatum
-
-									  (&tTupleDesc->attrs
-									   [iColumnCounter - 1]->attname));
+		cpFieldName = DatumGetPointer(NameGetDatum(&tTupleDesc->attrs[iColumnCounter - 1]->attname));
 
 		debug_msg2("dbmirror:packageData field name: %s", cpFieldName);
 
-		while (iDataBlockSize - iUsedDataBlock <
-			   strlen(cpFieldName) + 6)
+		while (iDataBlockSize - iUsedDataBlock < strlen(cpFieldName) + 6)
 		{
-			cpDataBlock = SPI_repalloc(cpDataBlock,
-									   iDataBlockSize +
-									   BUFFER_SIZE);
+			cpDataBlock = SPI_repalloc(cpDataBlock, iDataBlockSize + BUFFER_SIZE);
 			iDataBlockSize = iDataBlockSize + BUFFER_SIZE;
 		}
 		sprintf(cpDataBlock + iUsedDataBlock, "\"%s\"=", cpFieldName);
@@ -622,9 +618,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 		{
 			while (iDataBlockSize - iUsedDataBlock < 2)
 			{
-				cpDataBlock = SPI_repalloc(cpDataBlock,
-										   iDataBlockSize
-										   + BUFFER_SIZE);
+				cpDataBlock = SPI_repalloc(cpDataBlock, iDataBlockSize + BUFFER_SIZE);
 				iDataBlockSize = iDataBlockSize + BUFFER_SIZE;
 				cpFormatedPtr = cpDataBlock + iUsedDataBlock;
 			}
@@ -644,9 +638,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 		while (iDataBlockSize - iUsedDataBlock < 3)
 		{
-			cpDataBlock = SPI_repalloc(cpDataBlock,
-									   iDataBlockSize +
-									   BUFFER_SIZE);
+			cpDataBlock = SPI_repalloc(cpDataBlock, iDataBlockSize + BUFFER_SIZE);
 			iDataBlockSize = iDataBlockSize + BUFFER_SIZE;
 			cpFormatedPtr = cpDataBlock + iUsedDataBlock;
 		}
@@ -669,9 +661,9 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 	memset(cpDataBlock + iUsedDataBlock, 0, iDataBlockSize - iUsedDataBlock);
 
 	iBlockLen = strlen(cpDataBlock);
-	cpDataBlock_tmp = SPI_palloc(VARHDRSZ+iBlockLen);
-	memcpy((cpDataBlock_tmp+VARHDRSZ), cpDataBlock, iBlockLen);
-	SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ+iBlockLen);
+	cpDataBlock_tmp = SPI_palloc(VARHDRSZ + iBlockLen);
+	memcpy(cpDataBlock_tmp + VARHDRSZ, cpDataBlock, iBlockLen);
+	SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ + iBlockLen);
 
 	SPI_pfree(cpDataBlock);
 
@@ -759,7 +751,7 @@ saveSequenceUpdate(Oid relid, int64 nextValue, bool iscalled)
 	if (SPI_connect() < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-			errmsg("dbmirror:savesequenceupdate could not connect to SPI")));
+				 errmsg("dbmirror:savesequenceupdate could not connect to SPI")));
 
 	insertPlan = SPI_prepare(insertQuery, 2, insertArgTypes);
 	insertDataPlan = SPI_prepare(insertDataQuery, 1, insertDataArgTypes);
