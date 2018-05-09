@@ -34,8 +34,8 @@
 
 #include "executor/spi.h"
 
-#include "commands/sequence.h"
 #include "commands/trigger.h"
+#include "utils/fmgrprotos.h"
 #include "utils/lsyscache.h"
 #include "utils/array.h"
 #include "utils/rel.h"
