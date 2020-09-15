@@ -34,13 +34,27 @@
 
 #include "executor/spi.h"
 
-#include "commands/sequence.h"
 #include "commands/trigger.h"
+#include "utils/fmgrprotos.h"
 #include "utils/lsyscache.h"
 #include "utils/array.h"
 #include "utils/rel.h"
 #include "catalog/pg_type.h"
 #include "access/xact.h"
+
+#ifndef FALSE
+#define FALSE (0)
+#endif
+
+#ifndef TRUE
+#define TRUE (!FALSE)
+#endif
+
+#if PG_VERSION_NUM < 110000
+// https://github.com/postgres/postgres/commit/4bd1994650fddf49e717e35f1930d62208845974#diff-350265f4962fd3fb1c5c2d8667d79700
+#define DatumGetRangeTypeP DatumGetRangeType
+#define RangeTypePGetDatum RangeTypeGetDatum
+#endif
 
 PG_MODULE_MAGIC;
 
@@ -571,7 +585,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 			}
 		}						/* KeyUsage!=ALL */
 
-		if (tTupleDesc->attrs[iColumnCounter - 1]->attisdropped)
+		if (TupleDescAttr(tTupleDesc, iColumnCounter - 1)->attisdropped)
 		{
 			/**
 			 * This column has been dropped.
@@ -582,8 +596,8 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 		cpFieldName = DatumGetPointer(NameGetDatum
 
-									  (&tTupleDesc->attrs
-									   [iColumnCounter - 1]->attname));
+									  (&TupleDescAttr(tTupleDesc,
+									   iColumnCounter - 1)->attname));
 
 		debug_msg2("dbmirror:packageData field name: %s", cpFieldName);
 
