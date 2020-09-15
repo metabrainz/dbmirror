@@ -75,10 +75,10 @@ int storePending(char *cpTableName, HeapTuple tBeforeTuple,
 int storeKeyInfo(char *cpTableName, HeapTuple tTupleData, TupleDesc tTuplDesc,
 			 Oid tableOid);
 int storeData(char *cpTableName, HeapTuple tTupleData,
-		  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage);
+  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage);
 
 int2vector *getPrimaryKey(Oid tblOid);
-ArrayType *getForeignKey(Oid tblOid);
+ArrayType  *getForeignKey(Oid tblOid);
 
 char *packageData(HeapTuple tTupleData, TupleDesc tTupleDecs, Oid tableOid,
 			enum FieldUsage eKeyUsage);
@@ -86,7 +86,9 @@ char *packageData(HeapTuple tTupleData, TupleDesc tTupleDecs, Oid tableOid,
 
 #define BUFFER_SIZE 256
 #define MAX_OID_LEN 10
+
 /*#define DEBUG_OUTPUT 1 */
+
 extern Datum recordchange(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(recordchange);
@@ -121,7 +123,7 @@ Datum
 recordchange(PG_FUNCTION_ARGS)
 {
 	TriggerData *trigdata;
-	Trigger		*trigger;
+	Trigger    *trigger;
 	TupleDesc	tupdesc;
 	HeapTuple	beforeTuple = NULL;
 	HeapTuple	afterTuple = NULL;
@@ -131,11 +133,10 @@ recordchange(PG_FUNCTION_ARGS)
 	char	   *schemaname;
 	char	   *fullyqualtblname;
 	char	   *pkxpress = NULL;
-	bool	    verbose;
+	bool		verbose;
 
 	if (fcinfo->context != NULL)
 	{
-
 		if (SPI_connect() < 0)
 		{
 			ereport(ERROR, (errcode(ERRCODE_CONNECTION_FAILURE),
@@ -145,13 +146,20 @@ recordchange(PG_FUNCTION_ARGS)
 
 		trigdata = (TriggerData *) fcinfo->context;
 
-		/* Get parameter to known if verbose mode should be activated (off by default) */
+		/*
+		 * Get parameter to known if verbose mode should be activated (off by
+		 * default)
+		 */
 		trigger = trigdata->tg_trigger;
-		if (trigger->tgnargs < 1) {
+		if (trigger->tgnargs < 1)
+		{
 			verbose = FALSE;
-		} else {
+		}
+		else
+		{
 			verbose = (strcmp(trigger->tgargs[0], "verbose") == 0) ? TRUE : FALSE;
 		}
+
 		debug_msg2("dbmirror:recordchange verbose mode = %i", verbose);
 
 		/* Extract the table name */
@@ -191,7 +199,6 @@ recordchange(PG_FUNCTION_ARGS)
 		{
 			ereport(ERROR, (errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
 						 errmsg("dbmirror:recordchange Unknown operation")));
-
 		}
 
 		if (storePending(fullyqualtblname, beforeTuple, afterTuple,
@@ -203,7 +210,6 @@ recordchange(PG_FUNCTION_ARGS)
 					 errmsg("operation could not be mirrored")));
 
 			return PointerGetDatum(NULL);
-
 		}
 		debug_msg("dbmirror:recordchange returning on success");
 
@@ -235,28 +241,24 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 			 char cOp,
 			 bool verbose)
 {
-	char	   *cpQueryBase = "INSERT INTO dbmirror_pending (TableName,Op,XID) VALUES ($1,$2,$3)";
-
+	void	   *vpPlan;
 	int			iResult = 0;
 	HeapTuple	tCurTuple;
 	char		nulls[3] = "   ";
 
 	/* Points the current tuple(before or after) */
 	Datum		saPlanData[3];
-	Oid			taPlanArgTypes[4] = {NAMEOID,
-		CHAROID,
-	INT4OID};
-	void	   *vpPlan;
+	Oid			taPlanArgTypes[3] = {NAMEOID, CHAROID, INT4OID};
+	char	   *cpQueryBase =
+	"INSERT INTO dbmirror_pending (TableName,Op,XID) VALUES ($1,$2,$3)";
+
 
 	tCurTuple = tBeforeTuple ? tBeforeTuple : tAfterTuple;
-
-
 
 	vpPlan = SPI_prepare(cpQueryBase, 3, taPlanArgTypes);
 	if (vpPlan == NULL)
 		ereport(ERROR, (errcode(ERRCODE_TRIGGERED_ACTION_EXCEPTION),
 						errmsg("dbmirror:storePending error creating plan")));
-
 
 	saPlanData[0] = PointerGetDatum(cpTableName);
 	saPlanData[1] = CharGetDatum(cOp);
@@ -267,10 +269,7 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 		elog(NOTICE, "storedPending fired (%s) returned %d",
 			 cpQueryBase, iResult);
 
-
-
 	debug_msg("dbmirror:storePending row successfully stored in pending table");
-
 
 	if (cOp == 'd')
 	{
@@ -282,7 +281,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 			iResult = storeData(cpTableName, tBeforeTuple, tTupDesc, tableOid, TRUE, ALLKEYS);
 		else
 			iResult = storeKeyInfo(cpTableName, tBeforeTuple, tTupDesc, tableOid);
-
 	}
 	else if (cOp == 'i')
 	{
@@ -291,7 +289,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 		 * Store all data
 		 */
 		iResult = storeData(cpTableName, tAfterTuple, tTupDesc, tableOid, FALSE, ALL);
-
 	}
 	else
 	{
@@ -316,13 +313,15 @@ int
 storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 			 TupleDesc tTupleDesc, Oid tableOid)
 {
-
-	Oid			saPlanArgTypes[1] = {VARCHAROID};
-	char	   *insQuery = "INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) VALUES(currval('dbmirror_pending_seqid_seq'),'t',$1)";
 	void	   *pplan;
-	Datum		saPlanData[1];
 	char	   *cpKeyData;
 	int			iRetCode;
+
+	Datum		saPlanData[1];
+	Oid			saPlanArgTypes[1] = {VARCHAROID};
+	char	   *insQuery =
+	"INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) " \
+	"VALUES(currval('dbmirror_pending_seqid_seq'),'t',$1)";
 
 	pplan = SPI_prepare(insQuery, 1, saPlanArgTypes);
 	if (pplan == NULL)
@@ -339,7 +338,6 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 		/* cpTableName already contains quotes... */
 				 errmsg("there is no PRIMARY KEY for table %s",
 						cpTableName)));
-
 
 	debug_msg2("dbmirror:storeKeyInfo key data: %s", cpKeyData);
 
@@ -358,16 +356,12 @@ storeKeyInfo(char *cpTableName, HeapTuple tTupleData,
 	debug_msg("insert successful");
 
 	return 0;
-
 }
-
-
 
 
 int2vector *
 getPrimaryKey(Oid tblOid)
 {
-	char	   *queryBase;
 	char	   *query;
 	bool		isNull;
 	int2vector *resultKey;
@@ -376,9 +370,12 @@ getPrimaryKey(Oid tblOid)
 	Datum		resDatum;
 	int			ret;
 
-	queryBase = "SELECT indkey FROM pg_index WHERE indisprimary='t' AND indrelid=";
+	char	   *queryBase =
+	"SELECT indkey FROM pg_index WHERE indisprimary='t' AND indrelid=";
+
 	query = SPI_palloc(strlen(queryBase) + MAX_OID_LEN + 1);
 	sprintf(query, "%s%d", queryBase, tblOid);
+
 	ret = SPI_exec(query, 1);
 	SPI_pfree(query);
 	if (ret != SPI_OK_SELECT || SPI_processed != 1)
@@ -397,7 +394,6 @@ getPrimaryKey(Oid tblOid)
 ArrayType *
 getForeignKey(Oid tblOid)
 {
-	char	   *queryBase;
 	char	   *query;
 	bool		isNull;
 	ArrayType  *resultKey;
@@ -405,9 +401,12 @@ getForeignKey(Oid tblOid)
 	Datum		resDatum;
 	int			ret;
 
-	queryBase = "SELECT array_cat_agg(conkey) FROM pg_constraint WHERE contype = 'f' AND conrelid=";
+	char	   *queryBase =
+	"SELECT array_cat_agg(conkey) FROM pg_constraint WHERE contype = 'f' AND conrelid=";
+
 	query = SPI_palloc(strlen(queryBase) + MAX_OID_LEN + 1);
 	sprintf(query, "%s%d", queryBase, tblOid);
+
 	ret = SPI_exec(query, 1);
 	SPI_pfree(query);
 	if (ret != SPI_OK_SELECT || SPI_processed != 1)
@@ -419,7 +418,6 @@ getForeignKey(Oid tblOid)
 	resultKey = DatumGetArrayTypePCopy(resDatum);
 
 	return resultKey;
-
 }
 
 /******************************************************************************
@@ -427,15 +425,17 @@ getForeignKey(Oid tblOid)
  *****************************************************************************/
 int
 storeData(char *cpTableName, HeapTuple tTupleData,
-		  TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage)
+   TupleDesc tTupleDesc, Oid tableOid, bool isKey, enum FieldUsage eKeyUsage)
 {
-
-	Oid			planArgTypes[2] = {BOOLOID, VARCHAROID};
-	char	   *insQuery = "INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) VALUES(currval('dbmirror_pending_seqid_seq'),$1,$2)";
 	void	   *pplan;
-	Datum		planData[2];
 	char	   *cpKeyData;
 	int			iRetValue;
+
+	Datum		planData[2];
+	Oid			planArgTypes[2] = {BOOLOID, VARCHAROID};
+	char	   *insQuery =
+	"INSERT INTO dbmirror_pendingdata (SeqId,IsKey,Data) " \
+	"VALUES(currval('dbmirror_pending_seqid_seq'),$1,$2)";
 
 	pplan = SPI_prepare(insQuery, 2, planArgTypes);
 	if (pplan == NULL)
@@ -468,9 +468,7 @@ storeData(char *cpTableName, HeapTuple tTupleData,
 
 	debug_msg("dbmirror:storeKeyData insert successful");
 
-
 	return 0;
-
 }
 
 /**
@@ -497,16 +495,16 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 	ArrayType  *tpFKeys = NULL;
 	int			iColumnCounter;
 	char	   *cpDataBlock;
-	char	               *cpDataBlock_tmp;
+	char	   *cpDataBlock_tmp;
 	int			iDataBlockSize;
 	int			iUsedDataBlock;
-	int                     iBlockLen;
+	int			iBlockLen;
 
 	iNumCols = tTupleDesc->natts;
 
 	debug_msg2("dbmirror:packageData table oid = %i", tableOid);
 
-	// Get PKs if required
+	/* Get PKs if required */
 	if (eKeyUsage != ALL)
 	{
 		tpPKeys = getPrimaryKey(tableOid);
@@ -517,7 +515,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 	if (tpPKeys != NULL)
 		debug_msg("dbmirror:packageData have primary keys");
 
-	// Get FKs if required
+	/* Get FKs if required */
 	if (eKeyUsage == ALLKEYS)
 	{
 		tpFKeys = getForeignKey(tableOid);
@@ -538,7 +536,6 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 		int			currentFKindex;
 		char	   *cpUnFormatedPtr;
 		char	   *cpFormatedPtr;
-
 		char	   *cpFieldName;
 		char	   *cpFieldData;
 
@@ -571,9 +568,9 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 				}
 			}
 
-			if ( (iIsPrimaryKey && (eKeyUsage == NONPRIMARY))
+			if ((iIsPrimaryKey && (eKeyUsage == NONPRIMARY))
 				|| (iIsForeignKey && (eKeyUsage == PRIMARY))
-				|| (!iIsPrimaryKey && !iIsForeignKey && (eKeyUsage != NONPRIMARY)) )
+				|| (!iIsPrimaryKey && !iIsForeignKey && (eKeyUsage != NONPRIMARY)))
 			{
 				/**
 				 * Don't use.
@@ -594,19 +591,13 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 			continue;
 		}
 
-		cpFieldName = DatumGetPointer(NameGetDatum
-
-									  (&TupleDescAttr(tTupleDesc,
-									   iColumnCounter - 1)->attname));
+		cpFieldName = DatumGetPointer(NameGetDatum(&TupleDescAttr(tTupleDesc, iColumnCounter - 1)->attname));
 
 		debug_msg2("dbmirror:packageData field name: %s", cpFieldName);
 
-		while (iDataBlockSize - iUsedDataBlock <
-			   strlen(cpFieldName) + 6)
+		while (iDataBlockSize - iUsedDataBlock < strlen(cpFieldName) + 6)
 		{
-			cpDataBlock = SPI_repalloc(cpDataBlock,
-									   iDataBlockSize +
-									   BUFFER_SIZE);
+			cpDataBlock = SPI_repalloc(cpDataBlock, iDataBlockSize + BUFFER_SIZE);
 			iDataBlockSize = iDataBlockSize + BUFFER_SIZE;
 		}
 		sprintf(cpDataBlock + iUsedDataBlock, "\"%s\"=", cpFieldName);
@@ -628,7 +619,6 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 			iUsedDataBlock++;
 			cpFormatedPtr++;
 			continue;
-
 		}
 		debug_msg2("dbmirror:packageData field data: \"%s\"",
 				   cpFieldData);
@@ -638,9 +628,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 		{
 			while (iDataBlockSize - iUsedDataBlock < 2)
 			{
-				cpDataBlock = SPI_repalloc(cpDataBlock,
-										   iDataBlockSize
-										   + BUFFER_SIZE);
+				cpDataBlock = SPI_repalloc(cpDataBlock, iDataBlockSize + BUFFER_SIZE);
 				iDataBlockSize = iDataBlockSize + BUFFER_SIZE;
 				cpFormatedPtr = cpDataBlock + iUsedDataBlock;
 			}
@@ -660,9 +648,7 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 		while (iDataBlockSize - iUsedDataBlock < 3)
 		{
-			cpDataBlock = SPI_repalloc(cpDataBlock,
-									   iDataBlockSize +
-									   BUFFER_SIZE);
+			cpDataBlock = SPI_repalloc(cpDataBlock, iDataBlockSize + BUFFER_SIZE);
 			iDataBlockSize = iDataBlockSize + BUFFER_SIZE;
 			cpFormatedPtr = cpDataBlock + iUsedDataBlock;
 		}
@@ -673,8 +659,10 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 				   cpDataBlock);
 
 	}							/* for iColumnCounter  */
+
 	if (tpPKeys != NULL)
 		SPI_pfree(tpPKeys);
+
 	if (tpFKeys != NULL)
 		SPI_pfree(tpFKeys);
 
@@ -684,12 +672,12 @@ packageData(HeapTuple tTupleData, TupleDesc tTupleDesc, Oid tableOid,
 
 	memset(cpDataBlock + iUsedDataBlock, 0, iDataBlockSize - iUsedDataBlock);
 
-        iBlockLen = strlen(cpDataBlock);
-        cpDataBlock_tmp = SPI_palloc(VARHDRSZ+iBlockLen);
-        memcpy((cpDataBlock_tmp+VARHDRSZ), cpDataBlock, iBlockLen);
-        SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ+iBlockLen);
+	iBlockLen = strlen(cpDataBlock);
+	cpDataBlock_tmp = SPI_palloc(VARHDRSZ + iBlockLen);
+	memcpy(cpDataBlock_tmp + VARHDRSZ, cpDataBlock, iBlockLen);
+	SET_VARSIZE(cpDataBlock_tmp, VARHDRSZ + iBlockLen);
 
-        SPI_pfree(cpDataBlock);
+	SPI_pfree(cpDataBlock);
 
 	return cpDataBlock_tmp;
 }
@@ -757,20 +745,21 @@ nextval_mirror(PG_FUNCTION_ARGS)
 static void
 saveSequenceUpdate(Oid relid, int64 nextValue, bool iscalled)
 {
-	Oid			insertArgTypes[2] = {NAMEOID, INT4OID};
-	Oid			insertDataArgTypes[1] = {NAMEOID};
 	void	   *insertPlan;
 	void	   *insertDataPlan;
-	Datum		insertDatum[2];
-	Datum		insertDataDatum[1];
 	char		nextSequenceText[64];
 
+	Datum		insertDatum[2];
+	Oid			insertArgTypes[2] = {NAMEOID, INT4OID};
 	const char *insertQuery =
-	"INSERT INTO dbmirror_Pending (TableName,Op,XID) VALUES" \
-	"($1,'s',$2)";
+	"INSERT INTO dbmirror_Pending (TableName,Op,XID) " \
+	"VALUES ($1,'s',$2)";
+
+	Datum		insertDataDatum[1];
+	Oid			insertDataArgTypes[1] = {NAMEOID};
 	const char *insertDataQuery =
-	"INSERT INTO dbmirror_PendingData(SeqId,IsKey,Data) VALUES " \
-	"(currval('dbmirror_pending_seqid_seq'),'t',$1)";
+	"INSERT INTO dbmirror_PendingData(SeqId,IsKey,Data) " \
+	"VALUES (currval('dbmirror_pending_seqid_seq'),'t',$1)";
 
 	if (SPI_connect() < 0)
 		ereport(ERROR,
@@ -819,3 +808,6 @@ saveSequenceUpdate(Oid relid, int64 nextValue, bool iscalled)
 
 	SPI_finish();
 }
+
+
+/* vim: set ts=4 sw=4: */
