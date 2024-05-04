@@ -243,7 +243,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 {
 	void	   *vpPlan;
 	int			iResult = 0;
-	HeapTuple	tCurTuple;
 	char		nulls[3] = "   ";
 
 	/* Points the current tuple(before or after) */
@@ -251,9 +250,6 @@ storePending(char *cpTableName, HeapTuple tBeforeTuple,
 	Oid			taPlanArgTypes[3] = {NAMEOID, CHAROID, INT4OID};
 	char	   *cpQueryBase =
 	"INSERT INTO dbmirror_pending (TableName,Op,XID) VALUES ($1,$2,$3)";
-
-
-	tCurTuple = tBeforeTuple ? tBeforeTuple : tAfterTuple;
 
 	vpPlan = SPI_prepare(cpQueryBase, 3, taPlanArgTypes);
 	if (vpPlan == NULL)
