@@ -453,7 +453,7 @@ storeData(char *cpTableName, HeapTuple tTupleData,
 		return -1;
 	}
 
-	planData[0] = PointerGetDatum(isKey);
+	planData[0] = BoolGetDatum(isKey);
 	planData[1] = PointerGetDatum(cpKeyData);
 	iRetValue = SPI_execp(pplan, planData, NULL, 1);
 
